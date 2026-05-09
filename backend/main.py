@@ -1,9 +1,12 @@
+import json
 import os
+import re
 from fastapi import FastAPI, UploadFile, File, Form, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from dotenv import load_dotenv
+from pypdf import PdfReader
 
 from backend.database import SessionLocal, engine
 from backend import models
@@ -13,10 +16,6 @@ from backend.auth import hash_password, verify_password, create_token, decode_to
 
 # AI
 from groq import Groq
-from langchain_community.document_loaders import PyPDFLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_community.vectorstores import Chroma
-from langchain_community.embeddings import HuggingFaceEmbeddings
 
 load_dotenv()
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
@@ -25,16 +24,61 @@ models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
-EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
-EMBEDDING_CACHE = "models"
+CHUNK_SIZE = 1200
+CHUNK_OVERLAP = 200
+STOPWORDS = {
+    "a", "an", "and", "are", "as", "at", "be", "by", "for", "from", "has",
+    "he", "in", "is", "it", "its", "of", "on", "or", "that", "the", "this",
+    "to", "was", "were", "will", "with", "what", "when", "where", "who",
+    "why", "how", "i", "you", "your"
+}
 
 
-def get_embeddings():
-    return HuggingFaceEmbeddings(
-        model_name=EMBEDDING_MODEL,
-        cache_folder=EMBEDDING_CACHE,
-        model_kwargs={"local_files_only": True},
-    )
+def extract_pdf_text(file_path: str) -> str:
+    reader = PdfReader(file_path)
+    pages = [(page.extract_text() or "").strip() for page in reader.pages]
+    return "\n\n".join(page for page in pages if page)
+
+
+def split_text(text: str):
+    chunks = []
+    start = 0
+    while start < len(text):
+        end = start + CHUNK_SIZE
+        chunk = text[start:end].strip()
+        if chunk:
+            chunks.append(chunk)
+        if end >= len(text):
+            break
+        start = max(end - CHUNK_OVERLAP, start + 1)
+    return chunks
+
+
+def tokenize(text: str):
+    return [
+        word for word in re.findall(r"[a-zA-Z0-9]+", text.lower())
+        if len(word) > 2 and word not in STOPWORDS
+    ]
+
+
+def best_chunks(question: str, chunks, limit: int = 3):
+    query_terms = set(tokenize(question))
+    if not query_terms:
+        return chunks[:limit]
+
+    ranked = []
+    for index, chunk in enumerate(chunks):
+        terms = tokenize(chunk)
+        if not terms:
+            continue
+        term_set = set(terms)
+        score = len(query_terms & term_set)
+        score += sum(terms.count(term) for term in query_terms) * 0.1
+        ranked.append((score, index, chunk))
+
+    ranked.sort(key=lambda item: item[0], reverse=True)
+    selected = [chunk for score, _, chunk in ranked if score > 0]
+    return (selected or chunks)[:limit]
 
 app.add_middleware(
     CORSMiddleware,
@@ -106,18 +150,15 @@ async def upload(
     with open(file_path, "wb") as f:
         f.write(await file.read())
 
-    # Process
-    loader = PyPDFLoader(file_path)
-    docs = loader.load()
+    text = extract_pdf_text(file_path)
 
-    if not any(d.page_content.strip() for d in docs):
+    if not text.strip():
         raise HTTPException(
             status_code=400,
             detail="This PDF has no selectable text. Please upload a text-based PDF, not a scanned/image-only PDF."
         )
 
-    splitter = RecursiveCharacterTextSplitter(chunk_size=800)
-    chunks = splitter.split_documents(docs)
+    chunks = split_text(text)
 
     if not chunks:
         raise HTTPException(
@@ -125,13 +166,8 @@ async def upload(
             detail="No readable text chunks were found in this PDF."
         )
 
-    embeddings = get_embeddings()
-
-    Chroma.from_documents(
-        chunks,
-        embeddings,
-        persist_directory=path
-    )
+    with open(f"{path}/chunks.json", "w", encoding="utf-8") as f:
+        json.dump({"filename": file.filename, "chunks": chunks}, f, ensure_ascii=False)
 
     # Save DB record after successful processing.
     pdf = models.PDF(filename=file.filename, user_id=user.id)
@@ -150,17 +186,18 @@ async def upload(
 async def ask(question: str = Form(...),
               user: models.User = Depends(get_user)):
 
-    path = f"storage/{user.id}"
+    chunk_path = f"storage/{user.id}/chunks.json"
 
-    if not os.path.exists(path):
+    if not os.path.exists(chunk_path):
         return {"answer": "Upload PDF first"}
 
-    embeddings = get_embeddings()
+    with open(chunk_path, "r", encoding="utf-8") as f:
+        chunks = json.load(f).get("chunks", [])
 
-    db = Chroma(persist_directory=path, embedding_function=embeddings)
+    if not chunks:
+        return {"answer": "Upload PDF first"}
 
-    docs = db.similarity_search(question, k=3)
-    context = "\n".join([d.page_content for d in docs])
+    context = "\n\n".join(best_chunks(question, chunks, limit=3))
 
     prompt = f"Context:\n{context}\n\nQ:{question}"
 
