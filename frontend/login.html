@@ -142,7 +142,7 @@
           localStorage.setItem("token", data.access_token);
           window.location = "index.html";
         } else {
-          showToast(data.detail || "Invalid credentials", "error");
+          showToast(data.detail || "Invalid email or password. If the app was restarted, please sign up again or use a persistent database.", "error");
         }
       } catch (err) {
         console.error("Fetch error:", err);

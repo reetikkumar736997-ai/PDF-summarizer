@@ -8,3 +8,4 @@ python-dotenv
 email-validator
 pypdf
 groq
+psycopg2-binary
