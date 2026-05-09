@@ -3,7 +3,9 @@ import os
 import re
 from fastapi import FastAPI, UploadFile, File, Form, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 from dotenv import load_dotenv
 from pypdf import PdfReader
@@ -23,6 +25,7 @@ client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
+FRONTEND_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend")
 
 CHUNK_SIZE = 1200
 CHUNK_OVERLAP = 200
@@ -233,3 +236,20 @@ def admin_only(user: models.User = Depends(get_user)):
 @app.get("/admin/users")
 def users(db: Session = Depends(get_db), admin=Depends(admin_only)):
     return db.query(models.User).all()
+
+
+if os.path.isdir(FRONTEND_DIR):
+    app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
+
+
+@app.get("/")
+def root_page():
+    return FileResponse(os.path.join(FRONTEND_DIR, "login.html"))
+
+
+@app.get("/{page_name}")
+def frontend_page(page_name: str):
+    allowed_pages = {"login.html", "signup.html", "index.html", "style.css"}
+    if page_name not in allowed_pages:
+        raise HTTPException(404)
+    return FileResponse(os.path.join(FRONTEND_DIR, page_name))
