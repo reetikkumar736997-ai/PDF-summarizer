@@ -172,6 +172,107 @@
     }
     .sidebar-tab:hover { background: rgba(69,133,255,0.08); border-left-color: rgba(69,133,255,0.5); }
     .sidebar-tab.active { background: rgba(69,133,255,0.14); border-left-color: #4585ff; }
+
+    @media (max-width: 768px) {
+      body { overflow-x: hidden; }
+
+      header .max-w-screen-2xl {
+        padding-left: 16px;
+        padding-right: 16px;
+      }
+
+      header .w-9 { width: 42px; height: 42px; }
+      #statusPill { padding: 8px 10px; font-size: 12px; }
+
+      .flex.h-screen.pt-14 {
+        height: auto;
+        min-height: 100vh;
+        display: block;
+        padding-top: 72px;
+      }
+
+      #sidebar {
+        width: 100%;
+        min-height: auto;
+        border-right: 0;
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+        overflow: visible;
+      }
+
+      #sidebar .p-5 { padding: 18px; }
+      #sidebar .mt-auto { margin-top: 8px; }
+
+      .drop-zone {
+        min-height: 170px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      main.flex-1 {
+        min-height: 620px;
+        overflow: visible;
+      }
+
+      #chatMessages {
+        min-height: 420px;
+        padding: 28px 18px 120px;
+        overflow: visible;
+      }
+
+      #welcomeState {
+        height: auto;
+        min-height: 360px;
+        justify-content: flex-start;
+      }
+
+      #welcomeState h2 {
+        font-size: 28px;
+        line-height: 1.15;
+      }
+
+      #welcomeState > p {
+        max-width: 320px;
+      }
+
+      #welcomeState .grid {
+        grid-template-columns: 1fr;
+        margin-top: 28px;
+        max-width: 340px;
+      }
+
+      .suggestion-chip {
+        border-radius: 16px;
+      }
+
+      .bubble-ai,
+      .bubble-user {
+        max-width: calc(100vw - 92px);
+      }
+
+      main > .glass.border-t {
+        position: sticky;
+        bottom: 0;
+        padding: 12px 14px;
+      }
+
+      #chatInput {
+        min-height: 48px;
+        font-size: 16px;
+      }
+
+      #sendBtn {
+        width: 48px;
+        height: 48px;
+        border-radius: 16px;
+      }
+
+      #toast {
+        left: 14px;
+        right: 14px;
+        bottom: 18px;
+      }
+    }
   </style>
 </head>
 
