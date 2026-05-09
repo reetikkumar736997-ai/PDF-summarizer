@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title> AI PDF SUMMARIZER –  PDF Summarizer</title>
+  <meta name="description" content="Upload any PDF and chat with it using AI. Get instant answers from your documents powered by RAG and LLaMA." />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { inter: ['Inter', 'sans-serif'] },
+          colors: {
+            brand: {
+              50:  '#f0f6ff',
+              100: '#ddeaff',
+              200: '#b5d0ff',
+              300: '#7fb1ff',
+              400: '#4585ff',
+              500: '#1a5eff',
+              600: '#0041f5',
+              700: '#0034d1',
+              800: '#042bab',
+              900: '#0b2886',
+            },
+            surface: {
+              900: '#0a0e1a',
+              800: '#0f1423',
+              700: '#151c2f',
+              600: '#1c2540',
+              500: '#232e50',
+            }
+          },
+          animation: {
+            'fade-up':    'fadeUp 0.4s ease both',
+            'pulse-slow': 'pulse 3s ease-in-out infinite',
+            'spin-slow':  'spin 2s linear infinite',
+          },
+          keyframes: {
+            fadeUp: {
+              '0%':   { opacity: 0, transform: 'translateY(16px)' },
+              '100%': { opacity: 1, transform: 'translateY(0)' },
+            },
+          },
+          boxShadow: {
+            glow:    '0 0 40px rgba(26,94,255,0.25)',
+            'glow-sm': '0 0 16px rgba(26,94,255,0.18)',
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #0f1423; }
+    ::-webkit-scrollbar-thumb { background: #1a5eff55; border-radius: 99px; }
+    ::-webkit-scrollbar-thumb:hover { background: #1a5eff99; }
+
+    /* Glassmorphism card */
+    .glass {
+      background: rgba(15, 20, 35, 0.7);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.07);
+    }
+
+    /* Animated gradient background */
+    .bg-animated {
+      background: radial-gradient(ellipse 80% 60% at 50% -10%, rgba(26,94,255,0.22) 0%, transparent 70%),
+                  radial-gradient(ellipse 60% 40% at 90% 80%, rgba(99,0,255,0.12) 0%, transparent 60%),
+                  #0a0e1a;
+    }
+
+    /* Gradient text */
+    .gradient-text {
+      background: linear-gradient(135deg, #4585ff 0%, #a855f7 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* Drop zone */
+    .drop-zone {
+      border: 2px dashed rgba(69,133,255,0.35);
+      transition: all 0.3s ease;
+    }
+    .drop-zone:hover, .drop-zone.drag-over {
+      border-color: #4585ff;
+      background: rgba(26,94,255,0.08);
+      box-shadow: 0 0 30px rgba(26,94,255,0.15);
+    }
+
+    /* Chat bubbles */
+    .bubble-user {
+      background: linear-gradient(135deg, #1a5eff 0%, #7c3aed 100%);
+    }
+    .bubble-ai {
+      background: rgba(21, 28, 47, 0.9);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    /* Typing dots */
+    .dot { animation: dotBounce 1.2s ease-in-out infinite; }
+    .dot:nth-child(2) { animation-delay: 0.2s; }
+    .dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes dotBounce {
+      0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+      30%            { transform: translateY(-6px); opacity: 1; }
+    }
+
+    /* Input focus ring */
+    .chat-input:focus { outline: none; box-shadow: 0 0 0 2px rgba(69,133,255,0.5); }
+
+    /* Progress bar */
+    @keyframes progress { from { width: 0%; } to { width: 100%; } }
+    .progress-bar { animation: progress 2.5s ease-in-out infinite; }
+
+    /* Button shine */
+    .btn-primary {
+      background: linear-gradient(135deg, #1a5eff 0%, #7c3aed 100%);
+      transition: all 0.25s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .btn-primary::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.15), transparent);
+      opacity: 0;
+      transition: opacity 0.25s;
+    }
+    .btn-primary:hover::after { opacity: 1; }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 32px rgba(26,94,255,0.4); }
+    .btn-primary:active { transform: translateY(0); }
+
+    /* Sidebar badge */
+    .status-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      animation: pulse-ring 2s ease-in-out infinite;
+    }
+    @keyframes pulse-ring {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50%       { transform: scale(1.4); opacity: 0.6; }
+    }
+
+    /* Message animation */
+    .msg-animate { animation: fadeUp 0.35s ease both; }
+
+    /* Sidebar */
+    #sidebar { transition: transform 0.3s ease; }
+
+    .sidebar-tab {
+      transition: all 0.2s ease;
+      border-left: 2px solid transparent;
+    }
+    .sidebar-tab:hover { background: rgba(69,133,255,0.08); border-left-color: rgba(69,133,255,0.5); }
+    .sidebar-tab.active { background: rgba(69,133,255,0.14); border-left-color: #4585ff; }
+  </style>
+</head>
+
+<body class="bg-animated min-h-screen text-gray-100 font-inter">
+
+  <!-- ===== TOP NAV ===== -->
+  <header class="fixed top-0 inset-x-0 z-50 glass border-b border-white/5">
+    <div class="max-w-screen-2xl mx-auto flex items-center justify-between px-6 py-3">
+      <!-- Logo -->
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl btn-primary flex items-center justify-center shadow-glow-sm">
+          <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23-.693L5 14.5m14.8.8l1.402 1.402c1 1 .3 2.7-1.1 2.7H4.9c-1.4 0-2.1-1.7-1.1-2.7L5 14.5" />
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-[15px] font-bold leading-none gradient-text">PDF AI Chat</h1>
+          <p class="text-[10px] text-gray-500 mt-0.5">Powered by LLaMA &amp; RAG</p>
+        </div>
+      </div>
+
+      <!-- Status pill -->
+      <div id="statusPill" class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs text-gray-400">
+        <span id="statusDot" class="status-dot bg-gray-600"></span>
+        <span id="statusText">No PDF loaded</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===== MAIN LAYOUT ===== -->
+  <div class="flex h-screen pt-14">
+
+    <!-- ===== SIDEBAR ===== -->
+    <aside id="sidebar" class="w-72 flex-shrink-0 glass border-r border-white/5 flex flex-col overflow-y-auto">
+      <!-- Upload Section -->
+      <div class="p-5">
+        <p class="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-4">Document</p>
+
+        <!-- Drop Zone -->
+        <div id="dropZone" class="drop-zone rounded-2xl p-6 text-center cursor-pointer mb-4 transition-all"
+             onclick="document.getElementById('fileInput').click()">
+          <div id="dropContent">
+            <div class="w-14 h-14 mx-auto mb-3 rounded-2xl bg-brand-900/60 flex items-center justify-center">
+              <svg class="w-7 h-7 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m6.75 12l-3-3m0 0l-3 3m3-3v6m-1.5-15H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+              </svg>
+            </div>
+            <p class="text-sm font-medium text-gray-300">Drop PDF here</p>
+            <p class="text-xs text-gray-600 mt-1">or click to browse</p>
+          </div>
+          <div id="fileInfo" class="hidden">
+            <div class="w-12 h-12 mx-auto mb-3 rounded-xl bg-green-900/40 flex items-center justify-center">
+              <svg class="w-6 h-6 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <p id="fileName" class="text-sm font-semibold text-green-400 truncate"></p>
+            <p id="fileSize" class="text-xs text-gray-500 mt-0.5"></p>
+          </div>
+        </div>
+        <input type="file" id="fileInput" accept=".pdf" class="hidden" />
+
+        <!-- Process Button -->
+        <button id="processBtn"
+          class="btn-primary w-full py-3 rounded-xl text-sm font-semibold text-white disabled:opacity-40 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none flex items-center justify-center gap-2"
+          disabled>
+          <svg id="processIcon" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z" />
+          </svg>
+          <span id="processBtnText">Process PDF</span>
+        </button>
+      </div>
+
+      <!-- Processing progress -->
+      <div id="progressWrap" class="hidden px-5 pb-4">
+        <div class="flex justify-between text-xs text-gray-500 mb-1.5">
+          <span>Processing…</span>
+          <span id="progressLabel">0%</span>
+        </div>
+        <div class="h-1.5 bg-white/5 rounded-full overflow-hidden">
+          <div id="progressBar" class="h-full progress-bar bg-gradient-to-r from-brand-500 to-purple-500 rounded-full"></div>
+        </div>
+      </div>
+
+      <hr class="border-white/5 mx-5" />
+
+      <!-- Info Cards -->
+      <div class="p-5 space-y-3">
+        <p class="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-2">Capabilities</p>
+        <div class="flex items-start gap-3">
+          <div class="w-7 h-7 rounded-lg bg-violet-900/40 flex items-center justify-center flex-shrink-0">
+            <svg class="w-3.5 h-3.5 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+            </svg>
+          </div>
+          <div>
+            <p class="text-xs font-medium text-gray-300">RAG Technology</p>
+            <p class="text-[11px] text-gray-600 leading-relaxed">Retrieval-Augmented Generation for accurate answers</p>
+          </div>
+        </div>
+        <div class="flex items-start gap-3">
+          <div class="w-7 h-7 rounded-lg bg-blue-900/40 flex items-center justify-center flex-shrink-0">
+            <svg class="w-3.5 h-3.5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M14.25 3.104v5.714c0 .597.237 1.17.659 1.591L19.8 15.3" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5 14.5l.47-.118 6.23.693 6.23-.693L19.8 15.3" />
+            </svg>
+          </div>
+          <div>
+            <p class="text-xs font-medium text-gray-300">LLaMA 3.1 Model</p>
+            <p class="text-[11px] text-gray-600 leading-relaxed">State-of-the-art language model for deep understanding</p>
+          </div>
+        </div>
+        <div class="flex items-start gap-3">
+          <div class="w-7 h-7 rounded-lg bg-emerald-900/40 flex items-center justify-center flex-shrink-0">
+            <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 01-.825-.242m9.345-8.334a2.126 2.126 0 00-.476-.095 48.64 48.64 0 00-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0011.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155" />
+            </svg>
+          </div>
+          <div>
+            <p class="text-xs font-medium text-gray-300">Semantic Search</p>
+            <p class="text-[11px] text-gray-600 leading-relaxed">Vector embeddings for contextual document retrieval</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="mt-auto p-5 space-y-3">
+        <button id="clearBtn" class="w-full py-2.5 rounded-xl text-xs font-semibold text-gray-500 border border-white/8 hover:bg-white/5 hover:text-gray-300 transition-all flex items-center justify-center gap-2">
+          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+          </svg>
+          Clear conversation
+        </button>
+        <button id="logoutBtn" class="w-full py-2.5 rounded-xl text-xs font-semibold text-red-400 border border-red-500/10 hover:bg-red-500/10 transition-all flex items-center justify-center gap-2">
+          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
+          </svg>
+          Log Out
+        </button>
+      </div>
+    </aside>
+
+    <!-- ===== CHAT AREA ===== -->
+    <main class="flex-1 flex flex-col min-w-0 overflow-hidden">
+
+      <!-- Messages scroll area -->
+      <div id="chatMessages" class="flex-1 overflow-y-auto px-6 py-8 space-y-6">
+
+        <!-- Welcome State -->
+        <div id="welcomeState" class="flex flex-col items-center justify-center h-full text-center msg-animate">
+          <div class="w-20 h-20 rounded-3xl btn-primary flex items-center justify-center shadow-glow mb-6">
+            <svg class="w-10 h-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+            </svg>
+          </div>
+          <h2 class="text-3xl font-bold gradient-text mb-3">Ask Your PDF Anything</h2>
+          <p class="text-gray-500 text-sm max-w-md leading-relaxed">Upload a PDF document on the left, click <strong class="text-gray-400">Process PDF</strong>, then start chatting with your document using natural language.</p>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-10 max-w-2xl w-full">
+            <div class="glass rounded-2xl p-4 text-left hover:border-brand-700 transition-colors cursor-pointer suggestion-chip">
+              <p class="text-xs text-brand-400 font-semibold mb-1">Summarize</p>
+              <p class="text-sm text-gray-400">Summarize the main points of this document</p>
+            </div>
+            <div class="glass rounded-2xl p-4 text-left hover:border-brand-700 transition-colors cursor-pointer suggestion-chip">
+              <p class="text-xs text-purple-400 font-semibold mb-1">Extract</p>
+              <p class="text-sm text-gray-400">What are the key findings mentioned?</p>
+            </div>
+            <div class="glass rounded-2xl p-4 text-left hover:border-brand-700 transition-colors cursor-pointer suggestion-chip">
+              <p class="text-xs text-emerald-400 font-semibold mb-1">Explain</p>
+              <p class="text-sm text-gray-400">Explain the conclusion in simple terms</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ===== INPUT BAR ===== -->
+      <div class="glass border-t border-white/5 px-6 py-4">
+        <div class="max-w-4xl mx-auto flex items-end gap-3">
+          <div class="flex-1 relative">
+            <textarea
+              id="chatInput"
+              rows="1"
+              placeholder="Ask anything about your PDF… (Enter to send, Shift+Enter for new line)"
+              class="chat-input w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3.5 text-sm text-gray-200 placeholder-gray-600 resize-none leading-relaxed transition-all"
+              style="max-height: 160px; overflow-y: auto;"
+            ></textarea>
+          </div>
+          <button id="sendBtn"
+            class="btn-primary flex-shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed"
+            disabled>
+            <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.269 20.876L5.999 12zm0 0h7.5" />
+            </svg>
+          </button>
+        </div>
+        <p class="text-center text-[11px] text-gray-700 mt-2">AI may make mistakes. Verify important information from the source document.</p>
+      </div>
+    </main>
+  </div>
+
+  <!-- ===== TOAST ===== -->
+  <div id="toast" class="fixed bottom-6 right-6 z-50 flex items-center gap-3 px-5 py-4 rounded-2xl glass border border-white/10 shadow-2xl text-sm font-medium transition-all duration-300 translate-y-20 opacity-0 pointer-events-none">
+    <span id="toastIcon"></span>
+    <span id="toastMsg"></span>
+  </div>
+
+  <script>
+    // ===================== STATE =====================
+    const token = localStorage.getItem('token');
+    if (!token) window.location = 'login.html';
+
+    const API = 'http://127.0.0.1:8000';
+    let messages = [];         // {role, content}[]
+    let pdfReady  = false;
+    let isLoading = false;
+
+    // ===================== DOM REFS =====================
+    const dropZone    = document.getElementById('dropZone');
+    const fileInput   = document.getElementById('fileInput');
+    const dropContent = document.getElementById('dropContent');
+    const fileInfo    = document.getElementById('fileInfo');
+    const fileName    = document.getElementById('fileName');
+    const fileSize    = document.getElementById('fileSize');
+    const processBtn  = document.getElementById('processBtn');
+    const processBtnText = document.getElementById('processBtnText');
+    const processIcon = document.getElementById('processIcon');
+    const progressWrap = document.getElementById('progressWrap');
+    const chatMessages = document.getElementById('chatMessages');
+    const chatInput   = document.getElementById('chatInput');
+    const sendBtn     = document.getElementById('sendBtn');
+    const clearBtn    = document.getElementById('clearBtn');
+    const statusDot   = document.getElementById('statusDot');
+    const statusText  = document.getElementById('statusText');
+    const welcomeState = document.getElementById('welcomeState');
+
+    // ===================== FILE HANDLING =====================
+    let selectedFile = null;
+
+    fileInput.addEventListener('change', e => {
+      const f = e.target.files[0];
+      if (f) handleFile(f);
+    });
+
+    dropZone.addEventListener('dragover', e => {
+      e.preventDefault();
+      dropZone.classList.add('drag-over');
+    });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropZone.classList.remove('drag-over');
+      const f = e.dataTransfer.files[0];
+      if (f && f.type === 'application/pdf') handleFile(f);
+      else showToast('⚠️ Please drop a PDF file', 'warn');
+    });
+
+    function handleFile(f) {
+      selectedFile = f;
+      dropContent.classList.add('hidden');
+      fileInfo.classList.remove('hidden');
+      fileName.textContent = f.name;
+      fileSize.textContent = formatBytes(f.size);
+      processBtn.disabled = false;
+      pdfReady = false;
+      setStatus('idle');
+    }
+
+    function formatBytes(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+
+    // ===================== PROCESS PDF =====================
+    processBtn.addEventListener('click', async () => {
+      if (!selectedFile) return;
+      setProcessing(true);
+      progressWrap.classList.remove('hidden');
+      setStatus('processing');
+
+      const form = new FormData();
+      form.append('file', selectedFile);
+
+      try {
+        const res = await fetch(`${API}/upload_pdf`, { 
+          method: 'POST', 
+          headers: { 'Authorization': `Bearer ${token}` },
+          body: form 
+        });
+        const data = await res.json();
+
+        if (res.ok && !data.error) {
+          pdfReady = true;
+          setStatus('ready');
+          updateSendBtn();
+          showToast('✅ PDF processed successfully!', 'success');
+          processBtnText.textContent = 'Processed ✓';
+        } else {
+          setStatus('error');
+          showToast('❌ ' + (data.error || data.detail || 'Processing failed'), 'error');
+          processBtnText.textContent = 'Retry';
+        }
+      } catch {
+        setStatus('error');
+        showToast('❌ Cannot connect to backend (port 8000)', 'error');
+        processBtnText.textContent = 'Retry';
+      } finally {
+        setProcessing(false);
+        progressWrap.classList.add('hidden');
+      }
+    });
+
+    function setProcessing(on) {
+      processBtn.disabled = on;
+      if (on) {
+        processIcon.innerHTML = `<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>`;
+        processBtnText.textContent = 'Processing…';
+      } else {
+        processIcon.innerHTML = `<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z"/></svg>`;
+      }
+    }
+
+    // ===================== STATUS =====================
+    function setStatus(state) {
+      const states = {
+        idle:       ['bg-gray-500', 'PDF selected'],
+        processing: ['bg-yellow-400', 'Processing…'],
+        ready:      ['bg-emerald-400', 'Ready to chat'],
+        error:      ['bg-red-500', 'Error occurred'],
+      };
+      const [color, text] = states[state] || states.idle;
+      statusDot.className = `status-dot ${color}`;
+      statusText.textContent = text;
+    }
+
+    // ===================== CHAT =====================
+    chatInput.addEventListener('input', () => {
+      chatInput.style.height = 'auto';
+      chatInput.style.height = Math.min(chatInput.scrollHeight, 160) + 'px';
+      updateSendBtn();
+    });
+
+    chatInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        if (!sendBtn.disabled) sendMessage();
+      }
+    });
+
+    sendBtn.addEventListener('click', sendMessage);
+
+    function updateSendBtn() {
+      sendBtn.disabled = !(pdfReady && chatInput.value.trim() && !isLoading);
+    }
+
+    async function sendMessage() {
+      const q = chatInput.value.trim();
+      if (!q || !pdfReady || isLoading) return;
+
+      chatInput.value = '';
+      chatInput.style.height = 'auto';
+      isLoading = true;
+      updateSendBtn();
+
+      // Hide welcome
+      if (welcomeState) welcomeState.style.display = 'none';
+
+      // Add user message
+      messages.push({ role: 'user', content: q });
+      appendMessage('user', q);
+
+      // Add typing indicator
+      const typingId = appendTyping();
+
+      // Call backend
+      const form = new FormData();
+      form.append('question', q);
+
+      let answer = '';
+      try {
+        const res = await fetch(`${API}/ask`, { 
+          method: 'POST', 
+          headers: { 'Authorization': `Bearer ${token}` },
+          body: form 
+        });
+        const data = await res.json();
+        answer = data.answer || '⚠️ No response from server';
+      } catch {
+        answer = '❌ Backend not reachable. Make sure the server is running on port 8000.';
+      }
+
+      // Remove typing, add answer
+      removeTyping(typingId);
+      messages.push({ role: 'assistant', content: answer });
+      appendMessage('assistant', answer);
+
+      isLoading = false;
+      updateSendBtn();
+    }
+
+    function appendMessage(role, content) {
+      const isUser = role === 'user';
+      const wrap = document.createElement('div');
+      wrap.className = `flex ${isUser ? 'justify-end' : 'justify-start'} gap-3 msg-animate`;
+
+      if (!isUser) {
+        wrap.innerHTML = `
+          <div class="w-8 h-8 rounded-xl btn-primary flex-shrink-0 flex items-center justify-center mt-1">
+            <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23-.693L5 14.5m14.8.8l1.402 1.402c1 1 .3 2.7-1.1 2.7H4.9c-1.4 0-2.1-1.7-1.1-2.7L5 14.5" />
+            </svg>
+          </div>
+          <div class="bubble-ai rounded-2xl rounded-tl-sm px-5 py-3.5 max-w-[75%]">
+            <p class="text-sm text-gray-200 leading-relaxed whitespace-pre-wrap">${escHtml(content)}</p>
+            <p class="text-[10px] text-gray-600 mt-2">${now()}</p>
+          </div>`;
+      } else {
+        wrap.innerHTML = `
+          <div class="bubble-user rounded-2xl rounded-tr-sm px-5 py-3.5 max-w-[75%]">
+            <p class="text-sm text-white leading-relaxed whitespace-pre-wrap">${escHtml(content)}</p>
+            <p class="text-[10px] text-blue-200/60 mt-2">${now()}</p>
+          </div>
+          <div class="w-8 h-8 rounded-xl bg-white/10 flex-shrink-0 flex items-center justify-center mt-1 text-gray-400 text-xs font-bold">U</div>`;
+      }
+
+      chatMessages.appendChild(wrap);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function appendTyping() {
+      const id = 'typing-' + Date.now();
+      const wrap = document.createElement('div');
+      wrap.id = id;
+      wrap.className = 'flex justify-start gap-3 msg-animate';
+      wrap.innerHTML = `
+        <div class="w-8 h-8 rounded-xl btn-primary flex-shrink-0 flex items-center justify-center mt-1">
+          <svg class="w-4 h-4 text-white animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+        </div>
+        <div class="bubble-ai rounded-2xl rounded-tl-sm px-5 py-4 flex items-center gap-2">
+          <span class="dot w-2 h-2 bg-brand-400 rounded-full inline-block"></span>
+          <span class="dot w-2 h-2 bg-brand-400 rounded-full inline-block"></span>
+          <span class="dot w-2 h-2 bg-brand-400 rounded-full inline-block"></span>
+        </div>`;
+      chatMessages.appendChild(wrap);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+      return id;
+    }
+
+    function removeTyping(id) {
+      const el = document.getElementById(id);
+      if (el) el.remove();
+    }
+
+    // ===================== SUGGESTION CHIPS =====================
+    document.querySelectorAll('.suggestion-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        const q = chip.querySelector('p:last-child').textContent;
+        if (pdfReady) {
+          chatInput.value = q;
+          updateSendBtn();
+          chatInput.focus();
+        } else {
+          showToast('📂 Please upload and process a PDF first', 'warn');
+        }
+      });
+    });
+
+    // ===================== LOGOUT =====================
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', () => {
+        localStorage.removeItem('token');
+        window.location = 'login.html';
+      });
+    }
+
+    // ===================== CLEAR CHAT =====================
+    clearBtn.addEventListener('click', () => {
+      messages = [];
+      const msgs = chatMessages.querySelectorAll('.msg-animate:not(#welcomeState)');
+      msgs.forEach(m => m.remove());
+      if (welcomeState) welcomeState.style.display = '';
+    });
+
+    // ===================== TOAST =====================
+    let toastTimer;
+    function showToast(msg, type = 'info') {
+      const toast = document.getElementById('toast');
+      const icons = { success: '✅', error: '❌', warn: '⚠️', info: 'ℹ️' };
+      const colors = {
+        success: 'border-emerald-500/30 text-emerald-300',
+        error:   'border-red-500/30 text-red-300',
+        warn:    'border-yellow-500/30 text-yellow-300',
+        info:    'border-blue-500/30 text-blue-300',
+      };
+      document.getElementById('toastIcon').textContent = icons[type] || 'ℹ️';
+      document.getElementById('toastMsg').textContent = msg.replace(/^[✅❌⚠️ℹ️]\s?/, '');
+
+      toast.className = `fixed bottom-6 right-6 z-50 flex items-center gap-3 px-5 py-4 rounded-2xl glass border shadow-2xl text-sm font-medium transition-all duration-300 ${colors[type]}`;
+      toast.classList.remove('translate-y-20', 'opacity-0', 'pointer-events-none');
+
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        toast.classList.add('translate-y-20', 'opacity-0', 'pointer-events-none');
+      }, 3500);
+    }
+
+    // ===================== HELPERS =====================
+    function escHtml(t) {
+      return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+    function now() {
+      return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+  </script>
+</body>
+</html>

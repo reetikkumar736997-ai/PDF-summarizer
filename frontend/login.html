@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login - AI PDF SUMMARIZER</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { inter: ['Inter', 'sans-serif'] },
+          colors: {
+            brand: {
+              400: '#4585ff',
+              500: '#1a5eff',
+              900: '#0b2886',
+            }
+          },
+          animation: {
+            'fade-up': 'fadeUp 0.4s ease both',
+          },
+          keyframes: {
+            fadeUp: {
+              '0%': { opacity: 0, transform: 'translateY(16px)' },
+              '100%': { opacity: 1, transform: 'translateY(0)' },
+            },
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .bg-animated {
+      background: radial-gradient(ellipse 80% 60% at 50% -10%, rgba(26,94,255,0.22) 0%, transparent 70%),
+                  radial-gradient(ellipse 60% 40% at 90% 80%, rgba(99,0,255,0.12) 0%, transparent 60%),
+                  #0a0e1a;
+      background-attachment: fixed;
+    }
+    .glass {
+      background: rgba(15, 20, 35, 0.7);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.07);
+    }
+    .gradient-text {
+      background: linear-gradient(135deg, #4585ff 0%, #a855f7 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #1a5eff 0%, #7c3aed 100%);
+      transition: all 0.25s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 32px rgba(26,94,255,0.4); }
+    .input-glass {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      transition: all 0.3s ease;
+    }
+    .input-glass:focus {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(69, 133, 255, 0.5);
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(69, 133, 255, 0.2);
+    }
+  </style>
+</head>
+<body class="bg-animated min-h-screen text-gray-100 flex items-center justify-center p-6">
+
+  <div class="glass max-w-sm w-full rounded-3xl p-8 animate-fade-up shadow-[0_0_40px_rgba(26,94,255,0.15)]">
+    <div class="text-center mb-8">
+      <div class="w-12 h-12 mx-auto rounded-xl btn-primary flex items-center justify-center mb-4">
+        <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23-.693L5 14.5m14.8.8l1.402 1.402c1 1 .3 2.7-1.1 2.7H4.9c-1.4 0-2.1-1.7-1.1-2.7L5 14.5" />
+        </svg>
+      </div>
+      <h2 class="text-2xl font-bold gradient-text">Welcome Back</h2>
+      <p class="text-sm text-gray-400 mt-2">Log in to chat with your PDFs</p>
+    </div>
+
+    <form id="loginForm" class="space-y-4">
+      <div>
+        <label class="block text-xs font-medium text-gray-400 mb-1.5">Email</label>
+        <input type="email" id="email" required class="input-glass w-full rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500" placeholder="you@example.com">
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-gray-400 mb-1.5">Password</label>
+        <input type="password" id="password" required class="input-glass w-full rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500" placeholder="••••••••">
+      </div>
+
+      <button type="submit" id="submitBtn" class="btn-primary w-full py-3.5 rounded-xl text-sm font-semibold text-white mt-6 flex justify-center items-center gap-2">
+        <span>Sign In</span>
+      </button>
+    </form>
+
+    <div class="mt-6 text-center">
+      <p class="text-xs text-gray-500">Don't have an account? <a href="signup.html" class="text-brand-400 font-medium hover:text-brand-300 transition-colors">Sign up</a></p>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="fixed bottom-6 right-6 flex items-center gap-3 px-5 py-4 rounded-2xl glass border border-white/10 shadow-2xl text-sm font-medium transition-all duration-300 translate-y-20 opacity-0 pointer-events-none">
+    <span id="toastIcon"></span>
+    <span id="toastMsg"></span>
+  </div>
+
+  <script>
+    const form = document.getElementById('loginForm');
+    const submitBtn = document.getElementById('submitBtn');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      
+      const originalBtnHtml = submitBtn.innerHTML;
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = `<svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg> Signing In...`;
+
+      try {
+        const res = await fetch("http://127.0.0.1:8000/login", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({ email, password })
+        });
+        
+        const data = await res.json();
+        
+        if (res.ok && data.access_token) {
+          localStorage.setItem("token", data.access_token);
+          window.location = "index.html";
+        } else {
+          showToast(data.detail || "Invalid credentials", "error");
+        }
+      } catch (err) {
+        console.error("Fetch error:", err);
+        showToast("Cannot connect to server. Error: " + err.message, "error");
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalBtnHtml;
+      }
+    });
+
+    let toastTimer;
+    function showToast(msg, type = 'error') {
+      const toast = document.getElementById('toast');
+      document.getElementById('toastIcon').textContent = type === 'error' ? '❌' : 'ℹ️';
+      document.getElementById('toastMsg').textContent = msg;
+      
+      const borderColor = type === 'error' ? 'border-red-500/30' : 'border-blue-500/30';
+      const textColor = type === 'error' ? 'text-red-300' : 'text-blue-300';
+      
+      toast.className = `fixed bottom-6 right-6 flex items-center gap-3 px-5 py-4 rounded-2xl glass border shadow-2xl text-sm font-medium transition-all duration-300 ${borderColor} ${textColor}`;
+      toast.classList.remove('translate-y-20', 'opacity-0', 'pointer-events-none');
+      
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        toast.classList.add('translate-y-20', 'opacity-0', 'pointer-events-none');
+      }, 3500);
+    }
+  </script>
+</body>
+</html>

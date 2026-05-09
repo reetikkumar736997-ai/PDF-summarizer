@@ -1,0 +1,17 @@
+.env
+.venv/
+.venv_bhopal/
+venv/
+__pycache__/
+*.py[cod]
+*.log
+app.db
+backend/app.db
+backend/temp.pdf
+backend/rag_temp.pdf
+storage/
+backend/storage/
+models/
+.pytest_cache/
+.mypy_cache/
+.DS_Store

@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+sqlalchemy
+python-jose
+passlib[bcrypt]
+python-multipart
+python-dotenv
+email-validator
+pypdf
+groq
+langchain
+langchain-community
+sentence-transformers
+chromadb
