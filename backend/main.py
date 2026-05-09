@@ -249,7 +249,23 @@ def root_page():
 
 @app.get("/{page_name}")
 def frontend_page(page_name: str):
-    allowed_pages = {"login.html", "signup.html", "index.html", "style.css"}
+    allowed_pages = {
+        "login.html",
+        "signup.html",
+        "index.html",
+        "style.css",
+        "manifest.webmanifest",
+        "sw.js",
+        "favicon.ico",
+    }
     if page_name not in allowed_pages:
         raise HTTPException(404)
     return FileResponse(os.path.join(FRONTEND_DIR, page_name))
+
+
+@app.get("/icons/{icon_name}")
+def frontend_icon(icon_name: str):
+    allowed_icons = {"icon-192.png", "icon-512.png"}
+    if icon_name not in allowed_icons:
+        raise HTTPException(404)
+    return FileResponse(os.path.join(FRONTEND_DIR, "icons", icon_name))
